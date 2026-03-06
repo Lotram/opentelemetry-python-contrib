@@ -12,6 +12,9 @@ from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
     InMemorySpanExporter,
 )
+from opentelemetry.semconv._incubating.attributes.db_attributes import (
+    DB_QUERY_PARAMETER_TEMPLATE,
+)
 from opentelemetry.semconv.trace import SpanAttributes
 from opentelemetry.test.test_base import TestBase
 from opentelemetry.trace import StatusCode
@@ -360,7 +363,7 @@ class TestFunctionalAsyncPG_CaptureParameters(TestBase, CheckSpanMixin):
             spans[0].attributes[SpanAttributes.DB_STATEMENT], "SELECT $1;"
         )
         self.assertEqual(
-            spans[0].attributes["db.statement.parameters"], "('1',)"
+            spans[0].attributes[f"{DB_QUERY_PARAMETER_TEMPLATE}.0"], "'1'"
         )
 
     def test_instrumented_fetch_method_with_arguments(self, *_, **__):
@@ -375,7 +378,7 @@ class TestFunctionalAsyncPG_CaptureParameters(TestBase, CheckSpanMixin):
             spans[0].attributes[SpanAttributes.DB_STATEMENT], "SELECT $1;"
         )
         self.assertEqual(
-            spans[0].attributes["db.statement.parameters"], "('1',)"
+            spans[0].attributes[f"{DB_QUERY_PARAMETER_TEMPLATE}.0"], "'1'"
         )
 
     def test_instrumented_executemany_method_with_arguments(self, *_, **__):
@@ -389,7 +392,8 @@ class TestFunctionalAsyncPG_CaptureParameters(TestBase, CheckSpanMixin):
             spans[0].attributes[SpanAttributes.DB_STATEMENT], "SELECT $1;"
         )
         self.assertEqual(
-            spans[0].attributes["db.statement.parameters"], "([['1'], ['2']],)"
+            spans[0].attributes[f"{DB_QUERY_PARAMETER_TEMPLATE}.0"],
+            "[['1'], ['2']]",
         )
 
     def test_instrumented_execute_interface_error_method(self, *_, **__):
@@ -404,7 +408,13 @@ class TestFunctionalAsyncPG_CaptureParameters(TestBase, CheckSpanMixin):
             spans[0].attributes[SpanAttributes.DB_STATEMENT], "SELECT 42;"
         )
         self.assertEqual(
-            spans[0].attributes["db.statement.parameters"], "(1, 2, 3)"
+            spans[0].attributes[f"{DB_QUERY_PARAMETER_TEMPLATE}.0"], "'1'"
+        )
+        self.assertEqual(
+            spans[0].attributes[f"{DB_QUERY_PARAMETER_TEMPLATE}.1"], "2"
+        )
+        self.assertEqual(
+            spans[0].attributes[f"{DB_QUERY_PARAMETER_TEMPLATE}.2"], "3"
         )
 
     def test_instrumented_executemany_method_empty_query(self, *_, **__):
@@ -417,7 +427,7 @@ class TestFunctionalAsyncPG_CaptureParameters(TestBase, CheckSpanMixin):
         self.assertEqual(spans[0].name, POSTGRES_DB_NAME)
         self.assertEqual(spans[0].attributes[SpanAttributes.DB_STATEMENT], "")
         self.assertEqual(
-            spans[0].attributes["db.statement.parameters"], "([],)"
+            spans[0].attributes[f"{DB_QUERY_PARAMETER_TEMPLATE}.0"], "[]"
         )
 
     def test_instrumented_fetch_method_broken_asyncpg(self, *_, **__):
@@ -489,7 +499,7 @@ class TestAsyncPGSamplingAttributes(TestBase):
                 SpanAttributes.NET_PEER_PORT: 5432,
                 SpanAttributes.NET_TRANSPORT: "ip_tcp",
                 SpanAttributes.DB_STATEMENT: "SELECT $1",
-                "db.statement.parameters": "('42',)",
+                f"{DB_QUERY_PARAMETER_TEMPLATE}.0": "'42'",
             },
         )
         self.assertEqual(span.kind, trace.SpanKind.CLIENT)
@@ -523,7 +533,7 @@ class TestAsyncPGSamplingAttributes(TestBase):
                 SpanAttributes.NET_PEER_PORT: 5432,
                 SpanAttributes.NET_TRANSPORT: "ip_tcp",
                 SpanAttributes.DB_STATEMENT: "SELECT $1",
-                "db.statement.parameters": "('99',)",
+                f"{DB_QUERY_PARAMETER_TEMPLATE}.0": "'99'",
             },
         )
         self.assertEqual(span.kind, trace.SpanKind.CLIENT)

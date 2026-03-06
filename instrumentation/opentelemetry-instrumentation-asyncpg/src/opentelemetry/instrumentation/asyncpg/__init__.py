@@ -59,9 +59,12 @@ from opentelemetry import trace
 from opentelemetry.instrumentation.asyncpg.package import _instruments
 from opentelemetry.instrumentation.asyncpg.version import __version__
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
-from opentelemetry.instrumentation.utils import unwrap
+from opentelemetry.instrumentation.utils import (
+    unwrap,
+)
 from opentelemetry.semconv._incubating.attributes.db_attributes import (
     DB_NAME,
+    DB_QUERY_PARAMETER_TEMPLATE,
     DB_STATEMENT,
     DB_SYSTEM,
     DB_USER,
@@ -107,7 +110,10 @@ def _hydrate_span_from_args(connection, query, parameters) -> dict:
         span_attributes[DB_STATEMENT] = query
 
     if parameters is not None and len(parameters) > 0:
-        span_attributes["db.statement.parameters"] = str(parameters)
+        for idx, value in enumerate(parameters):
+            span_attributes[f"{DB_QUERY_PARAMETER_TEMPLATE}.{idx}"] = repr(
+                value
+            )
 
     return span_attributes
 
