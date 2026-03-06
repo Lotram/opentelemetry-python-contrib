@@ -54,6 +54,7 @@ from opentelemetry.instrumentation.utils import (
 )
 from opentelemetry.semconv._incubating.attributes.db_attributes import (
     DB_NAME,
+    DB_QUERY_PARAMETER_TEMPLATE,
     DB_STATEMENT,
     DB_SYSTEM,
     DB_USER,
@@ -237,7 +238,9 @@ class TortoiseORMInstrumentor(BaseInstrumentor):
             tortoise.contrib.pydantic.base.PydanticListModel, "from_queryset"
         )
 
-    def _hydrate_span_from_args(self, connection, query, parameters) -> dict:
+    def _hydrate_span_from_args(  # pylint: disable=too-many-branches
+        self, connection, query, parameters
+    ) -> dict:
         """Get network and database attributes from connection."""
         span_attributes = {}
         capabilities = getattr(connection, "capabilities", None)
@@ -268,7 +271,10 @@ class TortoiseORMInstrumentor(BaseInstrumentor):
 
         if self.capture_parameters:
             if parameters is not None and len(parameters) > 0:
-                span_attributes["db.statement.parameters"] = str(parameters)
+                for idx, value in enumerate(parameters):
+                    span_attributes[f"{DB_QUERY_PARAMETER_TEMPLATE}.{idx}"] = (
+                        repr(value)
+                    )
 
         return span_attributes
 

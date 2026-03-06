@@ -21,6 +21,7 @@ from opentelemetry.instrumentation.tortoiseorm import TortoiseORMInstrumentor
 from opentelemetry.instrumentation.utils import suppress_instrumentation
 from opentelemetry.semconv._incubating.attributes.db_attributes import (
     DB_NAME,
+    DB_QUERY_PARAMETER_TEMPLATE,
     DB_STATEMENT,
     DB_SYSTEM,
 )
@@ -30,6 +31,7 @@ from opentelemetry.test.test_base import TestBase
 class MockModel(models.Model):
     id = fields.IntField(pk=True)
     name = fields.TextField()
+    description = fields.TextField(default="")
 
     def __str__(self):
         return self.name
@@ -87,15 +89,31 @@ class TestTortoiseORMInstrumentor(TestBase):
 
         async def run():
             await self._init_tortoise()
-            await MockModel.create(name="Test Parameterized")
+            await MockModel.create(
+                name="Test Capture Params", description="Multiple Params"
+            )
 
         self._async_call(run())
         spans = self.memory_exporter.get_finished_spans()
         insert_span = next(s for s in spans if s.name == "INSERT")
-        self.assertIn("db.statement.parameters", insert_span.attributes)
-        self.assertIn(
-            "Test Parameterized",
-            insert_span.attributes["db.statement.parameters"],
+        self.assertEqual(
+            insert_span.attributes[f"{DB_QUERY_PARAMETER_TEMPLATE}.0"],
+            "['Test Capture Params', 'Multiple Params']",
+        )
+
+    def test_capture_no_parameters(self):
+        TortoiseORMInstrumentor().uninstrument()
+        TortoiseORMInstrumentor().instrument(capture_parameters=True)
+
+        async def run():
+            await self._init_tortoise()
+            await MockModel.all()
+
+        self._async_call(run())
+        spans = self.memory_exporter.get_finished_spans()
+        select_span = next(s for s in spans if s.name == "SELECT")
+        self.assertNotIn(
+            f"{DB_QUERY_PARAMETER_TEMPLATE}.0", select_span.attributes
         )
 
     def test_uninstrument(self):
