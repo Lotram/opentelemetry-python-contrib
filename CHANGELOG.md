@@ -11,6 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Breaking changes
+
+- `opentelemetry-instrumentation-dbapi`, `opentelemetry-instrumentation-asyncpg`,
+  `opentelemetry-instrumentation-tortoiseorm`: Replace `db.statement.parameters`
+  attribute with individual `db.query.parameter.<key>` attributes following
+  [OTel database semantic conventions](https://opentelemetry.io/docs/specs/semconv/attributes-registry/db/).
+  This also affects instrumentations that delegate to dbapi (psycopg, psycopg2, aiopg, mysql, etc.).
+
 ## Version 1.40.0/0.61b0 (2026-03-04)
 
 ### Added
