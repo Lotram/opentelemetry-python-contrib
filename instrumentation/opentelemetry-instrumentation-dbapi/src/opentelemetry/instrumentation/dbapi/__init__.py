@@ -186,6 +186,7 @@ from opentelemetry.instrumentation.utils import (
 )
 from opentelemetry.semconv._incubating.attributes.db_attributes import (
     DB_NAME,
+    DB_QUERY_PARAMETER_TEMPLATE,
     DB_STATEMENT,
     DB_SYSTEM,
     DB_USER,
@@ -231,7 +232,7 @@ def trace_integration(
             user in Connection object.
         tracer_provider: The :class:`opentelemetry.trace.TracerProvider` to
             use. If omitted the current configured one is used.
-        capture_parameters: Configure if db.statement.parameters should be captured.
+        capture_parameters: Configure if db.query.parameter.<key> attributes should be captured.
         enable_commenter: Flag to enable/disable sqlcommenter.
         db_api_integration_factory: The `DatabaseApiIntegration` to use. If none is passed the
             default one is used.
@@ -280,7 +281,7 @@ def wrap_connect(
             user in Connection object.
         tracer_provider: The :class:`opentelemetry.trace.TracerProvider` to
             use. If omitted the current configured one is used.
-        capture_parameters: Configure if db.statement.parameters should be captured.
+        capture_parameters: Configure if db.query.parameter.<key> attributes should be captured.
         enable_commenter: Flag to enable/disable sqlcommenter.
         db_api_integration_factory: The `DatabaseApiIntegration` to use. If none is passed the
             default one is used.
@@ -359,7 +360,7 @@ def instrument_connection(
             user in a connection object.
         tracer_provider: The :class:`opentelemetry.trace.TracerProvider` to
             use. If omitted the current configured one is used.
-        capture_parameters: Configure if db.statement.parameters should be captured.
+        capture_parameters: Configure if db.query.parameter.<key> attributes should be captured.
         enable_commenter: Flag to enable/disable sqlcommenter.
         commenter_options: Configurations for tags to be appended at the sql query.
         connect_module: Module name where connect method is available.
@@ -701,7 +702,17 @@ class CursorTracer(Generic[CursorT]):
             span.set_attribute(attribute_key, attribute_value)
 
         if self._db_api_integration.capture_parameters and len(args) > 1:
-            span.set_attribute("db.statement.parameters", str(args[1]))
+            params = args[1]
+            if isinstance(params, dict):
+                for key, value in params.items():
+                    span.set_attribute(
+                        f"{DB_QUERY_PARAMETER_TEMPLATE}.{key}", repr(value)
+                    )
+            elif isinstance(params, (tuple, list)):
+                for idx, value in enumerate(params):
+                    span.set_attribute(
+                        f"{DB_QUERY_PARAMETER_TEMPLATE}.{idx}", repr(value)
+                    )
 
     def get_operation_name(
         self, cursor: CursorT, args: tuple[Any, ...]

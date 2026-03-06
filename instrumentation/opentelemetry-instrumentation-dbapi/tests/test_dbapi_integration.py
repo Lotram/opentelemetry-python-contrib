@@ -26,6 +26,7 @@ from opentelemetry.sdk import resources
 from opentelemetry.semconv._incubating.attributes import net_attributes
 from opentelemetry.semconv._incubating.attributes.db_attributes import (
     DB_NAME,
+    DB_QUERY_PARAMETER_TEMPLATE,
     DB_STATEMENT,
     DB_SYSTEM,
     DB_USER,
@@ -75,7 +76,7 @@ class TestDBApiIntegration(TestBase):
         self.assertEqual(span.attributes[DB_SYSTEM], "testcomponent")
         self.assertEqual(span.attributes[DB_NAME], "testdatabase")
         self.assertEqual(span.attributes[DB_STATEMENT], "Test query")
-        self.assertFalse("db.statement.parameters" in span.attributes)
+        self.assertNotIn(f"{DB_QUERY_PARAMETER_TEMPLATE}.0", span.attributes)
         self.assertEqual(span.attributes[DB_USER], "testuser")
         self.assertEqual(span.attributes[NET_PEER_NAME], "testhost")
         self.assertEqual(span.attributes[NET_PEER_PORT], 123)
@@ -142,8 +143,12 @@ class TestDBApiIntegration(TestBase):
         self.assertEqual(span.attributes[DB_NAME], "testdatabase")
         self.assertEqual(span.attributes[DB_STATEMENT], "Test query")
         self.assertEqual(
-            span.attributes["db.statement.parameters"],
-            "('param1Value', False)",
+            span.attributes[f"{DB_QUERY_PARAMETER_TEMPLATE}.0"],
+            "'param1Value'",
+        )
+        self.assertEqual(
+            span.attributes[f"{DB_QUERY_PARAMETER_TEMPLATE}.1"],
+            "False",
         )
         self.assertEqual(span.attributes[DB_USER], "testuser")
         self.assertEqual(

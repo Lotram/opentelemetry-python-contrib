@@ -22,6 +22,9 @@ from psycopg.sql import SQL, Composed
 import opentelemetry.instrumentation.psycopg
 from opentelemetry.instrumentation.psycopg import PsycopgInstrumentor
 from opentelemetry.sdk import resources
+from opentelemetry.semconv._incubating.attributes.db_attributes import (
+    DB_QUERY_PARAMETER_TEMPLATE,
+)
 from opentelemetry.test.test_base import TestBase
 
 
@@ -288,7 +291,11 @@ class TestPostgresqlIntegration(PostgresqlIntegrationTestMixin, TestBase):
         assert spans_list[0].attributes is not None
         self.assertEqual(spans_list[0].attributes["db.statement"], query)
         self.assertEqual(
-            spans_list[0].attributes["db.statement.parameters"], str(params)
+            spans_list[0].attributes[f"{DB_QUERY_PARAMETER_TEMPLATE}.0"],
+            "'test'",
+        )
+        self.assertEqual(
+            spans_list[0].attributes[f"{DB_QUERY_PARAMETER_TEMPLATE}.1"], "42"
         )
 
     # pylint: disable=unused-argument
@@ -568,7 +575,11 @@ class TestPostgresqlIntegrationAsync(
         assert spans_list[0].attributes is not None
         self.assertEqual(spans_list[0].attributes["db.statement"], query)
         self.assertEqual(
-            spans_list[0].attributes["db.statement.parameters"], str(params)
+            spans_list[0].attributes[f"{DB_QUERY_PARAMETER_TEMPLATE}.0"],
+            "'test'",
+        )
+        self.assertEqual(
+            spans_list[0].attributes[f"{DB_QUERY_PARAMETER_TEMPLATE}.1"], "42"
         )
 
     # pylint: disable=unused-argument
