@@ -11,8 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# type: ignore
-
 """
 OpenTelemetry Base Instrumentor
 """
@@ -51,7 +49,7 @@ class BaseInstrumentor(ABC):
     _instance = None
     _is_instrumented_by_opentelemetry = False
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args: Any, **kwargs: Any):
         if cls._instance is None:
             cls._instance = object.__new__(cls)
 
